@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E9E4F2">
+<title>Inkstone strata: community rarity checker</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#eee;font:17px/1.5 "Palatino Linotype",Palatino,Georgia,serif;padding-bottom:110px}
+.n,button,input,summary{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+:focus-visible{outline:3px solid #E5483A;outline-offset:2px}
+.top{background:#E9E4F2;color:#1D1530;padding:max(44px,env(safe-area-inset-top)) 22px 40px}
+.top h1{margin:0;font-size:clamp(2.4rem,9vw,4.4rem);line-height:1;font-weight:700}
+.top p{max-width:34ch;margin:14px 0 0;color:#4A4560}
+.top .scroll{margin-top:26px;font:600 .9rem system-ui,sans-serif;color:#4A4560}
+.layer{padding:44px 22px 40px;border-top:1px solid #2a2a2e;position:relative}
+.layer.hit{box-shadow:inset 0 4px 0 #E5483A}
+.layer h2{margin:0;font-size:clamp(2rem,8vw,3.4rem);line-height:1}
+.layer .meta{margin:6px 0 18px;opacity:.8}
+.layer video{display:block;width:min(100%,300px);aspect-ratio:1;object-fit:contain;background:#000;border-radius:14px}
+details{margin-top:18px}
+summary{cursor:pointer;font-weight:600;padding:10px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font:600 .95rem system-ui,sans-serif;min-width:54px;padding:8px 10px;background:transparent;color:inherit;border:1.5px solid currentColor;border-radius:3px;cursor:pointer}
+.chip:hover{background:rgba(255,255,255,.14)}
+.find{background:#0A0A0A;padding:44px 22px;border-top:1px solid #2a2a2e}
+.find h2{margin:0 0 6px;font-size:1.8rem}
+.fl{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.fb{font:600 .95rem system-ui,sans-serif;padding:9px 14px;background:transparent;color:#eee;border:2px solid #eee;border-radius:3px;cursor:pointer}
+.fb[aria-pressed=true]{background:#eee;color:#000}
+footer{padding:30px 22px;color:#9a9aa4;font-size:.9rem;border-top:1px solid #2a2a2e}
+footer p{max-width:60ch;margin:0 0 10px}footer a{color:#cfc8e8}
+#gauge{position:fixed;right:0;top:0;width:4px;height:100%;background:rgba(255,255,255,.08);z-index:5}
+#gauge i{display:block;width:100%;height:0;background:#E5483A}
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:12px 16px max(14px,env(safe-area-inset-bottom));background:#0A0A0Af0;border-top:1px solid #333;display:flex;gap:10px;max-width:640px;margin:0 auto}
+#bar input{flex:1;min-width:0;font:700 1.35rem system-ui,sans-serif;padding:11px 18px;border-radius:30px;border:0;background:#EDE8F5;color:#1D1530}
+#bar button{font:700 1rem system-ui,sans-serif;padding:0 24px;border-radius:30px;border:0;background:#B23A2E;color:#fff;cursor:pointer}
+#msg{position:fixed;left:0;right:0;bottom:84px;text-align:center;font:600 .9rem system-ui,sans-serif;color:#ff8a7d;z-index:41;pointer-events:none}
+#sheet{--r2:120%;position:fixed;left:0;right:0;bottom:var(--bh,76px);z-index:30;max-height:calc(82vh - var(--bh,76px));overflow:auto;max-width:640px;margin:0 auto;background:#EDE8F5;color:#1D1530;border-radius:20px 20px 0 0;padding:20px 20px max(24px,env(safe-area-inset-bottom))}
+#sheet[hidden]{display:none}
+.sh{display:flex;gap:16px;align-items:center;justify-content:space-between}
+.sh h3{margin:0;font:800 3rem/1 system-ui,sans-serif}
+.sh small{display:block;font:500 .9rem system-ui,sans-serif;color:#4A4560}
+.seal{flex:none;min-width:116px;text-align:center;color:#B23A2E;border:4px solid #B23A2E;outline:2px solid #B23A2E;outline-offset:-10px;padding:16px 8px;transform:rotate(-3deg);animation:p .3s .8s ease-out both}
+.seal b{display:block;font-size:1.25rem;line-height:1.1}.seal span{font:600 .8rem system-ui,sans-serif}
+@keyframes p{from{transform:rotate(-3deg) scale(1.3);opacity:0}}
+@media(prefers-reduced-motion:reduce){.seal{animation:none}}
+#sheet video{display:block;width:150px;aspect-ratio:1;object-fit:contain;background:#000;border-radius:12px;margin:14px 0 0}
+#tr{list-style:none;margin:16px 0 0;padding:0}
+#tr li{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;margin-bottom:5px;background:#fff8;border-left:5px solid #b9b3c9;font:.9rem system-ui,sans-serif;color:#4A4560}
+#tr li.on{border-left-color:#B23A2E;color:#1D1530}#tr b{font-weight:700}
+.sa{display:flex;gap:16px;margin-top:12px;font:600 .95rem system-ui,sans-serif}.sa a,.sa button{color:#1D1530;background:none;border:0;padding:0;font:inherit;text-decoration:underline;cursor:pointer}
+@property --r{syntax:"<percentage>";inherits:false;initial-value:120%}
+@property --r2{syntax:"<percentage>";inherits:false;initial-value:120%}
+#ink{--r:120%;display:none;position:fixed;inset:0;z-index:25;background:rgba(11,14,20,.88);-webkit-mask-image:radial-gradient(ellipse at 50% 100%,#000 var(--r),transparent calc(var(--r) + 16%));mask-image:radial-gradient(ellipse at 50% 100%,#000 var(--r),transparent calc(var(--r) + 16%))}
+#ink.go{display:block;animation:bleed 1s ease-out}
+@keyframes bleed{from{--r:0%}}
+#sheet{-webkit-mask-image:radial-gradient(ellipse at 50% 100%,#000 var(--r2),transparent calc(var(--r2) + 14%));mask-image:radial-gradient(ellipse at 50% 100%,#000 var(--r2),transparent calc(var(--r2) + 14%))}
+#sheet.rev{animation:wash 1s .2s ease-out both}
+@keyframes wash{from{--r2:0%}}
+#sheet.rev .sh h3,#sheet.rev #ssub,#sheet.rev #tr{animation:soak .9s .7s ease-out both}
+@keyframes soak{from{filter:blur(9px);opacity:0}}
+@media(prefers-reduced-motion:reduce){#ink.go,#sheet.rev,#sheet.rev .sh h3,#sheet.rev #ssub,#sheet.rev #tr{animation:none}}
+</style></head><body>
+<div id="gauge" aria-hidden="true"><i></i></div>
+<header class="top"><h1>Inkstone<br>strata</h1><p>Scroll down through the six layers of the collection, or check any Stone by its number.</p><div class="scroll">Rarest layers are at the bottom</div></header>
+<main id="layers"></main>
+<section class="find"><h2>Find by trait</h2><p style="margin:0;color:#aaa">Number traits shared across tiers.</p><div class="fl" id="fl"></div><p id="fc" style="color:#aaa;margin:0 0 8px"></p><div class="chips" id="fr" style="color:#eee"></div></section>
+<footer><p>Community-made and not affiliated with or endorsed by the INKSTONE creator. Ranks use the same trait-rarity scoring as OpenSea and were checked against live OpenSea ranks.</p><p><a href="https://opensea.io/collection/ink-stone" target="_blank" rel="noopener noreferrer">INKSTONE on OpenSea</a></p></footer>
+<div id="ink"></div>
+<div id="msg" role="alert"></div>
+<div id="sheet" role="dialog" aria-label="Stone details" hidden>
+<div class="sh"><h3 id="sid"></h3><div class="seal" id="seal"><b id="stier"></b><span id="srank"></span></div></div>
+<small id="ssub" style="font:500 .9rem system-ui,sans-serif;color:#4A4560"></small>
+<video id="sv" muted loop playsinline></video>
+<ul id="tr"></ul>
+<div class="sa"><a id="os" target="_blank" rel="noopener noreferrer">View on OpenSea</a><button id="x" type="button">Close</button></div>
+</div>
+<div id="bar"><label for="q" style="position:absolute;left:-9999px">Stone number</label><input id="q" type="number" inputmode="numeric" min="1" max="1234" placeholder="Stone number" autocomplete="off"><button id="go" type="button">Check</button></div>
+<script>
+(function(){
+var D="a6a747a4a7a4a5a6a4b0adb063a0a0a061a021a0b2acb100a0a0a020a180a1b0acb2a0a0a1a0a0a0a180b1acb0a0a1a0a0a0a0a0a1b0aeb0a0a0a1a0a1a0a0a0b08c31a0a0a0a1a0a12080b0acb0a1a0a0a0a1a0a0a0b0acb3a080a0a0a020a041b0aca0a5a0a1a0a0a0a1a0a1a02ca0a1a0a080a0a040a0a4a0b0a040a0a160a0a0858040a0a00061a0a160a460a0a2a0a0a0a081a0a58020a0a0a0a18080a0a4a0a180a0a0a140a0a0a42061a0a0a060a0a1a0a5a0a000a0a0a0a0a0a0a580a1a0a0a081a0a1a00084a0a000a0a0a0a0b0a1a4a080a0a0a0a080a0a0aca1a020a06160a10080a44350a040a0a0a1a0a1a4a0a04080a0a0a0a081a48080a0a0a1a0a0a020a4a180a0a0a0a0a1a081a4a0a080a0a180a0a0418481a0a0a040a08080a0a4a1a0a0a0a0a02080a0a0a440a0a0a1a060a0a1a0a5a0a0a0a120a0a0b0a0a460a0a0a060a060a160ac80a0a0a1a080a0a0a0a460b0a0a1a061a0a060a5a0a0a08080a1608000a4a0a0a0a180a080a0a0a5a0a0a082a0a1a0a080a56040a0a0a0a1a080a0a4a0a080a18080a0a1a0a0a4a0a0a0a0a1a0a060a0a44080a0a0a1a061a0a064a0a0a0a08040a190a1a4a0a0a0a0a1a0a0a081ac00a0a0a0a1a0a0a0a0a460b0a1a0a040a1a0814460a001a0a0a0a0a080a4a0a0a040a1a0a0a0a0a4a0a0816000a0a1a0a084a0a0a0a0a1a0a0a0a1a0a4a040a0a1a0a0a0a0a0a460a0a0a0a0a10001a064a0a0a060a0a060a0a0a4a0a060a0a0a1a030a0a4a0a1a0a0a0a0a080a0aca0a160a0a0a0a0a1a0a4a09060a1a0a1a0a060a480a1a0a0a0a0606000a4a061a0a0a060a0a1a08440a080a1a0a1a0a0a0a0a4a1a0a0a2a080a1a0406481a0a1a0a0a0a060a064a0a0a0a0a120a0a060a4a0a0a0a081a0a1a0a084a1a0a0a0a080a1b060a4a0a0a1a0a1a080a040aca0a0a0a040a021a0a0a4a1b0a0a080a081a0a0a4a0a0a0a0a1a0a0a0a0a4a0a0a0a081a0a0a08020a4a0a1a0a0a0a0a0a0a0a4a0a180a0a0a0a0a0a0a5a0a0a0a0a0a1a0a0a0a4a0a1a060a081a0a0a0a4a080a0a1a0a0a0a0a065a0a0a0a1a0602030a044a0a1a0a080a1a0a060aca080a080a0a0a0a0a0856090a0a0a0a080a0a085a0a0a0a0a0a0a0a020a0a4a1a0a1a060a060a0a06480a0a14081a0a06001a4a1a080a0a0a0a0a0a0a46120a08020a0a080a0a48060a0a0a1a0a0a0a1a4a16080a0a1a0a0a0a0a4a0a0808080a0a0b041a4a0a0a140a18040a0a1aca06080a0a0a060a0a0a440a0a0a0a0a060a0a1a084a0a100a08080a0a0a0a5a06060a0a0a0a0a0a0a5a0a0a0a0a0a0a0a1a064a0a1a0a0a0a0a0a1a0a4a0a0a0a1a0a0a0a0a0a4a0a0a0a08040a021a0a4a0a14080a0a0a0a1a064a0a0a061a0a040b2a0a4a0a1a0a0a04080a1a0aca064a0a0a080a0a0a0a1a0a0a0a1a0a0a0a0a061a0a1a0a0a060a0a0a0a0a0a1a0a1a080a080a08120a0a0a080a0a0a060a180a1a0a0a080a0a08040a0a1806180a0a040a0a1a0a0a060a0a0a0a0a0a020a0a0a0a080a081a0a0a0a1a0a120a0a0a1a0a0a0a0a0616040a0a0a0a1a0aca0a0a06080a1a0a0a0a0a0a1a0a040a0a0a1a060a0a0a080a0a080a080a080a0a0a060a0a040a0a1a0a1a080a0a0a040a0a080a1a0a0a0a0a0a0a0a1a040a0a0a0a0a0a0a0a1a080a080806120a0a0a0a0a1a0a0a0a0a06080a180a0a0a0ffa0a080a0a0a0a120a0a00140a0a0a4a0a1a0a080a0a0a1a0a180a070",V=["https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/368b86aab9d06bc2eca6e5138c9f4e/b2368b86aab9d06bc2eca6e5138c9f4e.mp4", "https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/bb582c667e069de0e9e074ff122bea/7cbb582c667e069de0e9e074ff122bea.mp4", "https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/507e1cbb6bce333286ad6ab020dff3/7e507e1cbb6bce333286ad6ab020dff3.mp4", "https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/aea7eb7e57aa6f26115389e46eea19/b5aea7eb7e57aa6f26115389e46eea19.mp4", "https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/50b685fb1c0ca54a26beb616476a9e/6450b685fb1c0ca54a26beb616476a9e.mp4", "https://raw2.seadn.io/ink/0x23750e3ccd20bf1a43f0d56d84d90ef510142687/a04c85cfe91617858b344fe3897c16/03a04c85cfe91617858b344fe3897c16.mp4"],C="0x23750e3ccd20bf1a43f0d56d84d90ef510142687",MAX=1234;
+var T=[["Legendary","Rune","#EDEDF2","#000"],["Mythic","Crystal","#B7BCC4","#000"],["Epic","Black","#9A9AA2","#050506"],["Rare","Gold","#E3C26B","#0B0805"],["Uncommon","Emerald","#7FE0B0","#06231A"],["Common","Ink","#E6D8FF","#1E0B3D"]];
+var H=["58vh","46vh","44vh","48vh","54vh","70vh"];
+var B=[["prime","Prime number"],["fib","Fibonacci number"],["pal","Palindrome"],["same","Same digits"],["seq","Sequential number"]];
+var id,info={},tc=[0,0,0,0,0,0],bc=[[0,0],[0,0],[0,0],[0,0],[0,0]],dc={},N=0,i,j;
+for(id=1;id<=MAX;id++){var v=parseInt(D.substr(id*2-2,2),16);if(v>=192)continue;var t=v>>5,b=v&31,d=String(id).length;info[id]={t:t,b:b,d:d};N++;tc[t]++;dc[d]=(dc[d]||0)+1;for(j=0;j<5;j++)bc[j][b>>j&1]++}
+var S={};for(id in info){var o=info[id],s=-2*Math.log(tc[o.t]/N)-Math.log(dc[o.d]/N);for(j=0;j<5;j++)s-=Math.log(bc[j][o.b>>j&1]/N);S[id]=s}
+var sc=Object.keys(S).map(function(k){return S[k]});
+function rank(id){var n=1;for(var k=0;k<sc.length;k++)if(sc[k]>S[id]+1e-9)n++;return n}
+function fm(x){return x.toLocaleString("en-US")}
+function pc(c){var p=c/N*100;return(p<1?p.toFixed(1):Math.round(p))+"%"}
+var $=function(x){return document.getElementById(x)};
+var ids=Object.keys(info).map(Number).sort(function(a,b){return a-b});
+function chips(list){return list.map(function(n){return '<button class="chip" type="button" data-id="'+n+'" aria-label="Check Stone '+n+'">'+n+'</button>'}).join("")}
+var h="";T.forEach(function(t,k){var list=ids.filter(function(n){return info[n].t==k});
+h+='<section class="layer" id="L'+k+'" style="background:'+t[3]+';color:'+t[2]+';min-height:'+H[k]+'"><h2>'+t[0]+'</h2><p class="meta">'+t[1]+', '+fm(list.length)+' Stones</p><video muted loop playsinline preload="none" data-src="'+V[k]+'" aria-hidden="true"></video><details><summary>Show all '+fm(list.length)+' Stones</summary><div class="chips">'+chips(list)+'</div></details></section>'});
+$("layers").innerHTML=h;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){var v=e.target;if(e.isIntersecting){if(!v.src)v.src=v.dataset.src;v.play().catch(function(){})}else v.pause()})},{rootMargin:"200px"});
+Array.prototype.forEach.call(document.querySelectorAll(".layer video"),function(v){v.onerror=function(){v.style.display="none"};io.observe(v)});
+var sh=$("sheet"),q=$("q"),msg=$("msg"),ink=$("ink");
+function shut(){sh.hidden=true;ink.classList.remove("go");$("sv").pause()}
+function bh(){document.documentElement.style.setProperty("--bh",$("bar").offsetHeight+"px")}bh();addEventListener("resize",bh);
+function show(n){var o=info[n],t=T[o.t],r=rank(n);
+$("sid").textContent="#"+n;$("stier").textContent=t[0];$("srank").textContent="Rank "+fm(r)+" of "+fm(N);
+$("ssub").textContent=t[1]+" stone";
+var sv=$("sv");sv.src=V[o.t];sv.play().catch(function(){});sv.onerror=function(){sv.style.display="none"};sv.style.display="block";
+var l='<li class="on"><b>'+t[0]+'</b><span>'+fm(tc[o.t])+' Stones ('+pc(tc[o.t])+')</span></li><li class="on"><b>'+o.d+(o.d>1?' digits':' digit')+'</b><span>'+fm(dc[o.d])+' Stones ('+pc(dc[o.d])+')</span></li>';
+B.forEach(function(x,j){var y=o.b>>j&1;l+='<li class="'+(y?"on":"")+'"><b>'+x[1]+'</b><span>'+(y?"Yes, "+fm(bc[j][1])+" Stones ("+pc(bc[j][1])+")":"No")+'</span></li>'});
+$("tr").innerHTML=l;$("os").href="https://opensea.io/item/ink/"+C+"/"+n;
+sh.hidden=false;sh.scrollTop=0;sh.classList.remove("rev");ink.classList.remove("go");var s=$("seal");s.style.animation="none";void sh.offsetWidth;sh.classList.add("rev");ink.classList.add("go");s.style.animation="";
+var L=$("L"+o.t);L.classList.add("hit");setTimeout(function(){L.classList.remove("hit")},2500);window.scrollTo({top:L.offsetTop-10,behavior:"smooth"})}
+function check(raw){var n=Number(raw);msg.textContent="";
+if(raw===""||!isFinite(n)||n%1||n<1||n>MAX){msg.textContent="Enter a whole number from 1 to "+fm(MAX);return}
+if(!info[n]){shut();msg.textContent="Stone #"+n+" isn't in the collection data. It may be unminted or burned.";return}
+q.value=n;show(n)}
+$("go").onclick=function(){check(q.value.trim())};
+q.onkeydown=function(e){if(e.key==="Enter")check(q.value.trim())};
+$("x").onclick=shut;ink.onclick=shut;
+document.addEventListener("keydown",function(e){if(e.key==="Escape")shut()});
+document.addEventListener("click",function(e){var c=e.target.closest&&e.target.closest(".chip");if(c)check(c.dataset.id)});
+var act=0;B.forEach(function(x,j){var b=document.createElement("button");b.type="button";b.className="fb";b.textContent=x[1];b.onclick=function(){act=j;draw()};$("fl").appendChild(b)});
+function draw(){var l=ids.filter(function(n){return info[n].b>>act&1});$("fc").textContent=fm(l.length)+" Stones ("+pc(l.length)+")";$("fr").innerHTML=chips(l);Array.prototype.forEach.call($("fl").children,function(b,j){b.setAttribute("aria-pressed",j===act)});Array.prototype.forEach.call($("fr").children,function(b){b.style.color=T[info[b.dataset.id].t][2]})}
+draw();
+var g=document.querySelector("#gauge i");addEventListener("scroll",function(){var m=document.documentElement.scrollHeight-innerHeight;g.style.height=(m>0?scrollY/m*100:0)+"%"},{passive:true});
+})();
+</script></body></html>
